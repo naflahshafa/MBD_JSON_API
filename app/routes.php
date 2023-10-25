@@ -104,276 +104,504 @@ return function (App $app) {
 
 
     // PROCEDURE: Barang
+    // get, get all barang
+    $app->get('/barangg', function(Request $request, Response $response) {
+        try {
+            $db = $this->get(PDO::class);
+
+            $query = $db->query('CALL lihat_semua_barang()');
+
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menampilkan data barang!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            // Tangani kesalahan PDO
+            $errorMessage = "Terjadi kesalahan dalam mengakses database: " . $e->getMessage();
+            $response->getBody()->write(json_encode(['error' => $errorMessage]));
+            return $response->withStatus(500)->withHeader("Content-Type", "application/json");
+        } catch (Exception $e) {
+            // Tangani kesalahan umum lainnya
+            $errorMessage = "Terjadi kesalahan: " . $e->getMessage();
+            $response->getBody()->write(json_encode(['error' => $errorMessage]));
+            return $response->withStatus(500)->withHeader("Content-Type", "application/json");
+        }  
+    });
+
     // get, get detail barang
     $app->get('/barangg/{id_barang}', function(Request $request, Response $response, $args) {
-        $db = $this->get(PDO::class);
+        try {
+            $db = $this->get(PDO::class);
     
-        $barang_id = $args['id_barang'];
-        // Memanggil prosedur dengan parameter jika diperlukan
-        $query = $db->prepare("CALL detail_item_barang(:barang_id)");
-        $query->bindParam(':barang_id', $barang_id, PDO::PARAM_INT);
-        $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode($results));
+            $barang_id = $args['id_barang'];
+            $query = $db->prepare("CALL detail_item_barang(:barang_id)");
+            $query->bindParam(':barang_id', $barang_id, PDO::PARAM_INT);
+            $query->execute();
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
     
-        return $response->withHeader("Content-Type", "application/json");
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'ID barang tidak ditemukan!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
      // get, get barang berdasarkan merk
     $app->get('/barangg/merk/{merk_barang}', function(Request $request, Response $response, $args) {
-        $db = $this->get(PDO::class);
+        try {
+            $db = $this->get(PDO::class);
         
-        $barang_merk = $args['merk_barang'];
-        $query = $db->prepare("CALL filter_barang_merk(:barang_merk)");
-        $query->bindParam(':barang_merk', $barang_merk, PDO::PARAM_STR);
-        $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode($results));
-        
-        return $response->withHeader("Content-Type", "application/json");
+            $barang_merk = $args['merk_barang'];
+            $query = $db->prepare("CALL filter_barang_merk(:barang_merk)");
+            $query->bindParam(':barang_merk', $barang_merk, PDO::PARAM_STR);
+            $query->execute();
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'Merk barang tidak ditemukan!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+            
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // post, add new barang
     $app->post('/barangg', function(Request $request, Response $response) {
-        $parsedBody = $request->getParsedBody();
-        $new_id_barang = $parsedBody["id_barang"];
-        $new_jenis_barang = $parsedBody["jenis_barang"];
-        $new_merk_barang = $parsedBody["merk_barang"];
-        $new_harga_perbaikan = $parsedBody["harga_perbaikan"];
-    
-        $db = $this->get(PDO::class);
-    
-        $query = $db->prepare('CALL tambah_barang(:new_id_barang, :new_jenis_barang, :new_merk_barang, :new_harga_perbaikan)');
-        $query->bindValue(':new_id_barang', $new_id_barang, PDO::PARAM_INT);
-        $query->bindValue(':new_jenis_barang', $new_jenis_barang, PDO::PARAM_STR);
-        $query->bindValue(':new_merk_barang', $new_merk_barang, PDO::PARAM_STR);
-        $query->bindValue(':new_harga_perbaikan', $new_harga_perbaikan, PDO::PARAM_INT);
-        $query->execute();
-    
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode(
-            [
-                'message' => 'Barang telah ditambahkan dengan id ' . $new_id_barang
-            ]
-        ));
-    
-        return $response->withHeader("Content-Type", "application/json");
+        try {
+            $parsedBody = $request->getParsedBody();
+            $new_id_barang = $parsedBody["id_barang"];
+            $new_jenis_barang = $parsedBody["jenis_barang"];
+            $new_merk_barang = $parsedBody["merk_barang"];
+            $new_harga_perbaikan = $parsedBody["harga_perbaikan"];
+        
+            $db = $this->get(PDO::class);
+        
+            $query = $db->prepare('CALL tambah_barang(:new_id_barang, :new_jenis_barang, :new_merk_barang, :new_harga_perbaikan)');
+            $query->bindValue(':new_id_barang', $new_id_barang, PDO::PARAM_INT);
+            $query->bindValue(':new_jenis_barang', $new_jenis_barang, PDO::PARAM_STR);
+            $query->bindValue(':new_merk_barang', $new_merk_barang, PDO::PARAM_STR);
+            $query->bindValue(':new_harga_perbaikan', $new_harga_perbaikan, PDO::PARAM_INT);
+            $query->execute();
+        
+            $rowCount = $query->rowCount(); 
+
+            if ($rowCount > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Barang telah ditambahkan dengan ID ' . $new_id_barang]));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menambahkan barang!']));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // put, update barang
     $app->put('/barangg/{id_barang}', function(Request $request, Response $response, $args) {
-        $parsedBody = $request->getParsedBody();
+        try {
+            $parsedBody = $request->getParsedBody();
 
-        $barang_id = $args['id_barang'];
-        $new_harga_perbaikan = $parsedBody ['harga_perbaikan'];
-        
-        $db = $this->get(PDO::class);
+            $barang_id = $args['id_barang'];
+            $new_jenis_barang = $parsedBody ['jenis_barang'];
+            $new_merk_barang = $parsedBody ['merk_barang'];
+            $new_harga_perbaikan = $parsedBody ['harga_perbaikan'];
+            
+            $db = $this->get(PDO::class);
+    
+            $query = $db->prepare('CALL ubah_harga_perbaikan_barang(:barang_id, :new_jenis_barang, :new_merk_barang, :new_harga_perbaikan)');
+            $query->bindValue(':barang_id', $barang_id, PDO::PARAM_INT);
+            $query->bindValue(':new_jenis_barang', $new_jenis_barang, PDO::PARAM_STR);
+            $query->bindValue(':new_merk_barang', $new_merk_barang, PDO::PARAM_STR);
+            $query->bindValue(':new_harga_perbaikan', $new_harga_perbaikan, PDO::PARAM_INT);
+            $query->execute();
+            $rowCount = $query->rowCount();
 
-        $query = $db->prepare('CALL ubah_harga_perbaikan_barang(:barang_id, :new_harga_perbaikan)');
-        $query->bindValue(':barang_id', $barang_id, PDO::PARAM_INT);
-        $query->bindValue(':new_harga_perbaikan', $new_harga_perbaikan, PDO::PARAM_INT);
-        $query->execute();
-
-        $response->getBody()->write(json_encode(
-            [
-                'message' => 'Barang dengan id ' . $barang_id . ' telah diperbarui dengan harga perbaikan ' . $new_harga_perbaikan
-            ]
-        ));
-
-        return $response->withHeader("Content-Type", "application/json");
+            if ($rowCount > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Barang dengan ID ' . $barang_id . ' telah diperbarui']));
+            } else {
+                $response->getBody()->write(json_encode(
+                    ['message' => 'Barang dengan ID ' . $barang_id . ' tidak ditemukan atau tidak ada perubahan yang dilakukan']
+                ));
+            }
+    
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // delete, delete barang from database
     $app->delete('/barangg/{id_barang}', function (Request $request, Response $response, $args) {
-        $barang_id = $args['id_barang'];
+        try {
+            $barang_id = $args['id_barang'];
 
-        $db = $this->get(PDO::class);
+            $db = $this->get(PDO::class);
 
-        $query = $db->prepare('CALL hapus_barang(?)');
-        $query->bindParam(1, $barang_id, PDO::PARAM_INT);
+            $query = $db->prepare('CALL hapus_barang(?)');
+            $query->bindParam(1, $barang_id, PDO::PARAM_INT);
+            $query->execute();
 
-        $query->execute();
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Barang dengan ID ' . $barang_id . ' telah dihapus dari database']));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Barang dengan ID ' . $barang_id . ' tidak ditemukan dalam database']));
+            }
 
-        $response->getBody()->write(json_encode(
-            [
-                'message' => 'Barang dengan id ' . $barang_id . ' telah dihapus dari database'
-            ]
-        ));
-
-        return $response->withHeader('Content-Type', 'application/json');
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
 
     // PROCEDURE: Pelanggan
+    // get, get all pelanggan
+    $app->get('/pelanggan', function(Request $request, Response $response) {
+        try {
+            $db = $this->get(PDO::class);
+
+            $query = $db->query('CALL lihat_semua_pelanggan()');
+
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menampilkan data pelanggan!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
+    });
+
     // get, get detail pelanggan
     $app->get('/pelanggan/{id_pelanggan}', function(Request $request, Response $response, $args) {
-        $db = $this->get(PDO::class);
+        try {
+            $db = $this->get(PDO::class);
     
-        $pelanggan_id = $args['id_pelanggan'];
-        $query = $db->prepare("CALL detail_pelanggan(:pelanggan_id)");
-        $query->bindParam(':pelanggan_id', $pelanggan_id, PDO::PARAM_INT);
-        $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode($results));
-    
-        return $response->withHeader("Content-Type", "application/json");
+            $pelanggan_id = $args['id_pelanggan'];
+            $query = $db->prepare("CALL detail_pelanggan(:pelanggan_id)");
+            $query->bindParam(':pelanggan_id', $pelanggan_id, PDO::PARAM_INT);
+            $query->execute();
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'ID pelanggan tidak ditemukan!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
     
     // post, add new pelanggan
     $app->post('/pelanggan', function(Request $request, Response $response) {
-        $parsedBody = $request->getParsedBody();
-        $new_id_pelanggan = $parsedBody["id_pelanggan"];
-        $new_nama_pelanggan = $parsedBody["nama_pelanggan"];
-    
-        $db = $this->get(PDO::class);
-    
-        $query = $db->prepare('CALL tambah_pelanggan(:new_id_pelanggan, :new_nama_pelanggan)');
-        $query->bindValue(':new_id_pelanggan', $new_id_pelanggan, PDO::PARAM_INT);
-        $query->bindValue(':new_nama_pelanggan', $new_nama_pelanggan, PDO::PARAM_STR);
-        $query->execute();
-    
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode(
-            ['message' => 'Pelanggan telah ditambahkan dengan id ' . $new_id_pelanggan]
-        ));
-    
-        return $response->withHeader("Content-Type", "application/json");
+        try {
+            $parsedBody = $request->getParsedBody();
+            $new_id_pelanggan = $parsedBody["id_pelanggan"];
+            $new_nama_pelanggan = $parsedBody["nama_pelanggan"];
+        
+            $db = $this->get(PDO::class);
+        
+            $query = $db->prepare('CALL tambah_pelanggan(:new_id_pelanggan, :new_nama_pelanggan)');
+            $query->bindValue(':new_id_pelanggan', $new_id_pelanggan, PDO::PARAM_INT);
+            $query->bindValue(':new_nama_pelanggan', $new_nama_pelanggan, PDO::PARAM_STR);
+            $query->execute();
+
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Pelanggan telah ditambahkan dengan ID ' . $new_id_pelanggan]));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menambahkan data pelanggan!']));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // put, update pelanggan
     $app->put('/pelanggan/{id_pelanggan}', function(Request $request, Response $response, $args) {
-        $parsedBody = $request->getParsedBody();
+        try {
+            $parsedBody = $request->getParsedBody();
 
-        $pelanggan_id = $args['id_pelanggan'];
-        $new_nama_pelanggan = $parsedBody ['nama_pelanggan'];
-        
-        $db = $this->get(PDO::class);
-
-        $query = $db->prepare('CALL ubah_nama_pelanggan(:pelanggan_id, :new_nama_pelanggan)');
-        $query->bindValue(':pelanggan_id', $pelanggan_id, PDO::PARAM_INT);
-        $query->bindValue(':new_nama_pelanggan', $new_nama_pelanggan, PDO::PARAM_STR);
-        $query->execute();
-
-        $response->getBody()->write(json_encode(
-            ['message' => 'Pelanggan dengan id ' . $pelanggan_id . ' telah diperbarui dengan nama: ' . $new_nama_pelanggan]
-        ));
-
-        return $response->withHeader("Content-Type", "application/json");
+            $pelanggan_id = $args['id_pelanggan'];
+            $new_nama_pelanggan = $parsedBody ['nama_pelanggan'];
+            
+            $db = $this->get(PDO::class);
+    
+            $query = $db->prepare('CALL ubah_nama_pelanggan(:pelanggan_id, :new_nama_pelanggan)');
+            $query->bindValue(':pelanggan_id', $pelanggan_id, PDO::PARAM_INT);
+            $query->bindValue(':new_nama_pelanggan', $new_nama_pelanggan, PDO::PARAM_STR);
+            $query->execute();
+    
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Pelanggan dengan ID ' . $pelanggan_id . ' telah diperbarui']));
+            } else {
+                $response->getBody()->write(json_encode(
+                    ['message' => 'Pelanggan dengan ID ' . $pelanggan_id . ' tidak ditemukan atau tidak ada perubahan yang dilakukan']
+                ));
+            }
+    
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // delete, delete pelanggan from database
     $app->delete('/pelanggan/{id_pelanggan}', function (Request $request, Response $response, $args) {
-        $pelanggan_id = $args['id_pelanggan'];
+        try {
+            $pelanggan_id = $args['id_pelanggan'];
 
-        $db = $this->get(PDO::class);
+            $db = $this->get(PDO::class);
 
-        $query = $db->prepare('CALL hapus_pelanggan(?)');
-        $query->bindParam(1, $pelanggan_id, PDO::PARAM_INT);
+            $query = $db->prepare('CALL hapus_pelanggan(?)');
+            $query->bindParam(1, $pelanggan_id, PDO::PARAM_INT);
 
-        $query->execute();
+            $query->execute();
 
-        $response->getBody()->write(json_encode(
-            ['message' => 'Pelanggan dengan id ' . $pelanggan_id . ' telah dihapus dari database']
-        ));
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Pelanggan dengan ID ' . $pelanggan_id . ' telah dihapus dari database']));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Pelanggan dengan ID ' . $pelanggan_id . ' tidak ditemukan dalam database']));
+            }
 
-        return $response->withHeader('Content-Type', 'application/json');
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
 
     // PROCEDURE: Teknisi
+    // get, get all teknisi
+    $app->get('/teknisi', function(Request $request, Response $response) {
+        try {
+            $db = $this->get(PDO::class);
+
+            $query = $db->query('CALL lihat_semua_teknisi()');
+    
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menampilkan data teknisi!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+    
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
+    });
+
     // get, get detail teknisi
     $app->get('/teknisi/{id_teknisi}', function(Request $request, Response $response, $args) {
-        $db = $this->get(PDO::class);
+        try {
+            $db = $this->get(PDO::class);
     
-        $teknisi_id = $args['id_teknisi'];
-        $query = $db->prepare("CALL detail_teknisi(:teknisi_id)");
-        $query->bindParam(':teknisi_id', $teknisi_id, PDO::PARAM_INT);
-        $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode($results));
+            $teknisi_id = $args['id_teknisi'];
+            $query = $db->prepare("CALL detail_teknisi(:teknisi_id)");
+            $query->bindParam(':teknisi_id', $teknisi_id, PDO::PARAM_INT);
+            $query->execute();
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
     
-        return $response->withHeader("Content-Type", "application/json");
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'ID teknisi tidak ditemukan!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // post, add new teknisi
     $app->post('/teknisi', function(Request $request, Response $response) {
-        $parsedBody = $request->getParsedBody();
-        $new_id_teknisi = $parsedBody["id_teknisi"];
-        $new_nama_teknisi = $parsedBody["nama_teknisi"];
-    
-        $db = $this->get(PDO::class);
-    
-        $query = $db->prepare('CALL tambah_teknisi(:new_id_teknisi, :new_nama_teknisi)');
-        $query->bindValue(':new_id_teknisi', $new_id_teknisi, PDO::PARAM_INT);
-        $query->bindValue(':new_nama_teknisi', $new_nama_teknisi, PDO::PARAM_STR);
-        $query->execute();
-    
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode(
-            ['message' => 'Teknisi telah ditambahkan dengan id ' . $new_id_teknisi]
-        ));
-    
-        return $response->withHeader("Content-Type", "application/json");
+        try {
+            $parsedBody = $request->getParsedBody();
+            $new_id_teknisi = $parsedBody["id_teknisi"];
+            $new_nama_teknisi = $parsedBody["nama_teknisi"];
+        
+            $db = $this->get(PDO::class);
+        
+            $query = $db->prepare('CALL tambah_teknisi(:new_id_teknisi, :new_nama_teknisi)');
+            $query->bindValue(':new_id_teknisi', $new_id_teknisi, PDO::PARAM_INT);
+            $query->bindValue(':new_nama_teknisi', $new_nama_teknisi, PDO::PARAM_STR);
+            $query->execute();
+
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Teknisi telah ditambahkan dengan ID ' . $new_id_teknisi]));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menambahkan data teknisi!']));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // put, update teknisi
     $app->put('/teknisi/{id_teknisi}', function(Request $request, Response $response, $args) {
-        $parsedBody = $request->getParsedBody();
+        try {
+            $parsedBody = $request->getParsedBody();
 
-        $teknisi_id = $args['id_teknisi'];
-        $new_nama_teknisi = $parsedBody ['nama_teknisi'];
-        
-        $db = $this->get(PDO::class);
+            $teknisi_id = $args['id_teknisi'];
+            $new_nama_teknisi = $parsedBody ['nama_teknisi'];
+            
+            $db = $this->get(PDO::class);
+    
+            $query = $db->prepare('CALL ubah_nama_teknisi(:teknisi_id, :new_nama_teknisi)');
+            $query->bindValue(':teknisi_id', $teknisi_id, PDO::PARAM_INT);
+            $query->bindValue(':new_nama_teknisi', $new_nama_teknisi, PDO::PARAM_STR);
+            $query->execute();
 
-        $query = $db->prepare('CALL ubah_nama_teknisi(:teknisi_id, :new_nama_teknisi)');
-        $query->bindValue(':teknisi_id', $teknisi_id, PDO::PARAM_INT);
-        $query->bindValue(':new_nama_teknisi', $new_nama_teknisi, PDO::PARAM_STR);
-        $query->execute();
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Teknisi dengan ID ' . $teknisi_id . ' telah diperbarui']));
+            } else {
+                $response->getBody()->write(json_encode(
+                    ['message' => 'Teknisi dengan ID ' . $teknisi_id . ' tidak ditemukan atau tidak ada perubahan yang dilakukan']
+                ));
+            }
 
-        $response->getBody()->write(json_encode(
-            ['message' => 'Teknisi dengan id ' . $teknisi_id . ' telah diperbarui dengan nama: ' . $new_nama_teknisi]
-        ));
-
-        return $response->withHeader("Content-Type", "application/json");
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // delete, delete pelanggan from database
     $app->delete('/teknisi/{id_teknisi}', function (Request $request, Response $response, $args) {
-        $teknisi_id = $args['id_teknisi'];
+        try {
+            $teknisi_id = $args['id_teknisi'];
 
-        $db = $this->get(PDO::class);
-
-        $query = $db->prepare('CALL hapus_teknisi(?)');
-        $query->bindParam(1, $teknisi_id, PDO::PARAM_INT);
-
-        $query->execute();
-
-        $response->getBody()->write(json_encode(
-            ['message' => 'Teknisi dengan id ' . $teknisi_id . ' telah dihapus dari database']
-        ));
-
-        return $response->withHeader('Content-Type', 'application/json');
+            $db = $this->get(PDO::class);
+    
+            $query = $db->prepare('CALL hapus_teknisi(?)');
+            $query->bindParam(1, $teknisi_id, PDO::PARAM_INT);
+    
+            $query->execute();
+    
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Teknisi dengan ID ' . $teknisi_id . ' telah dihapus dari database']));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Teknisi dengan ID ' . $teknisi_id . ' tidak ditemukan dalam database']));
+            }
+    
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
 
     // PROCEDURE: Service
+    // get, get all service
+    $app->get('/service', function(Request $request, Response $response) {
+        try {
+            $db = $this->get(PDO::class);
+
+            $query = $db->query('CALL lihat_semua_service()');
+    
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menampilkan data service!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+    
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
+    });
+
     // get, get detail service
     $app->get('/service/{id}', function(Request $request, Response $response, $args) {
-        $db = $this->get(PDO::class);
+        try {
+            $db = $this->get(PDO::class);
     
-        $service_id = $args['id'];
-        $query = $db->prepare("CALL detail_service(:service_id)");
-        $query->bindParam(':service_id', $service_id, PDO::PARAM_INT);
-        $query->execute();
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode($results));
+            $service_id = $args['id'];
+            $query = $db->prepare("CALL detail_service(:service_id)");
+            $query->bindParam(':service_id', $service_id, PDO::PARAM_INT);
+            $query->execute();
+            $results = $query->fetchAll(PDO::FETCH_ASSOC);
     
-        return $response->withHeader("Content-Type", "application/json");
+            if (empty($results)) {
+                $response->getBody()->write(json_encode(['message' => 'ID service tidak ditemukan!']));
+            } else {
+                $response->getBody()->write(json_encode($results));
+            }
+        
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // post, add new service
     $app->post('/service', function(Request $request, Response $response) {
-        $parsedBody = $request->getParsedBody();
+        try {
+            $parsedBody = $request->getParsedBody();
         $new_id = $parsedBody["id"];
         $new_id_pelanggan = $parsedBody["id_pelanggan"];
         $new_id_teknisi = $parsedBody["id_teknisi"];
@@ -397,52 +625,76 @@ return function (App $app) {
         $query->bindValue(':new_biaya_tambahan', $new_biaya_tambahan, PDO::PARAM_INT);
         $query->bindValue(':new_totalBiaya_service', $new_totalBiaya_service, PDO::PARAM_INT);
         $query->execute();
-    
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode(
-            ['message' => 'Service telah ditambahkan dengan id ' . $new_id]
-        ));
+
+        if ($query->rowCount() > 0) {
+            $response->getBody()->write(json_encode(['message' => 'Service telah ditambahkan dengan ID ' . $new_id]));
+        } else {
+            $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menambahkan data service!']));
+        }
     
         return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // put, update service
     $app->put('/service/{id}', function(Request $request, Response $response, $args) {
-        $parsedBody = $request->getParsedBody();
+        try {
+            $parsedBody = $request->getParsedBody();
 
-        $service_id = $args['id'];
-        $new_ket_kerusakan = $parsedBody ['kerusakan'];
-        
-        $db = $this->get(PDO::class);
-
-        $query = $db->prepare('CALL ubah_ket_kerusakan(:service_id, :new_ket_kerusakan)');
-        $query->bindValue(':service_id', $service_id, PDO::PARAM_INT);
-        $query->bindValue(':new_ket_kerusakan', $new_ket_kerusakan, PDO::PARAM_STR);
-        $query->execute();
-
-        $response->getBody()->write(json_encode(
-            ['message' => 'Service dengan id ' . $service_id . ' telah diperbarui dengan keterangan: ' . $new_ket_kerusakan]
-        ));
-
-        return $response->withHeader("Content-Type", "application/json");
+            $service_id = $args['id'];
+            $new_ket_kerusakan = $parsedBody ['kerusakan'];
+            
+            $db = $this->get(PDO::class);
+    
+            $query = $db->prepare('CALL ubah_ket_kerusakan(:service_id, :new_ket_kerusakan)');
+            $query->bindValue(':service_id', $service_id, PDO::PARAM_INT);
+            $query->bindValue(':new_ket_kerusakan', $new_ket_kerusakan, PDO::PARAM_STR);
+            $query->execute();
+    
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Service dengan ID ' . $service_id . ' telah diperbarui dengan kerusakan: ' . $new_ket_kerusakan]));
+            } else {
+                $response->getBody()->write(json_encode(
+                    ['message' => 'Service dengan ID ' . $service_id . ' tidak ditemukan atau tidak ada perubahan yang dilakukan']
+                ));
+            }
+    
+            return $response->withHeader("Content-Type", "application/json");
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
 
     // delete, delete service from database
     $app->delete('/service/{id}', function (Request $request, Response $response, $args) {
-        $service_id = $args['id'];
+        try {
+            $service_id = $args['id'];
 
-        $db = $this->get(PDO::class);
-
-        $query = $db->prepare('CALL hapus_service(?)');
-        $query->bindParam(1, $service_id, PDO::PARAM_INT);
-
-        $query->execute();
-
-        $response->getBody()->write(json_encode(
-            ['message' => 'Service dengan id ' . $service_id . ' telah dihapus dari database']
-        ));
-
-        return $response->withHeader('Content-Type', 'application/json');
+            $db = $this->get(PDO::class);
+    
+            $query = $db->prepare('CALL hapus_service(?)');
+            $query->bindParam(1, $service_id, PDO::PARAM_INT);
+    
+            $query->execute();
+    
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Service dengan ID ' . $service_id . ' telah dihapus dari database']));
+            } else {
+                $response->getBody()->write(json_encode(['message' => 'Service dengan ID ' . $service_id . ' tidak ditemukan dalam database']));
+            }
+    
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (PDOException $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+        }
     });
   
 };
