@@ -187,47 +187,59 @@ return function (App $app) {
     // post, add new barang
     $app->post('/barangg', function(Request $request, Response $response) {
         try {
+            $db = $this->get(PDO::class);
+
             $parsedBody = $request->getParsedBody();
             $new_id_barang = $parsedBody["id_barang"];
             $new_jenis_barang = $parsedBody["jenis_barang"];
             $new_merk_barang = $parsedBody["merk_barang"];
             $new_harga_perbaikan = $parsedBody["harga_perbaikan"];
 
-            // Mengecek apakah semua key sudah terisi, tidak boleh ada yang kosong
             if (empty($parsedBody["id_barang"]) || empty($parsedBody["jenis_barang"]) || empty($parsedBody["merk_barang"]) || empty($parsedBody["harga_perbaikan"])) {
                 $response->getBody()->write(json_encode(['error' => 'Semua field harus diisi.']));
-                return $response->withHeader("Content-Type", "application/json")->withStatus(400); // 400 Bad Request
+                return $response->withHeader("Content-Type", "application/json")->withStatus(400);
             }
-            // Jika semua parameter terisi, lanjutkan dengan eksekusi kueri ke database di sini
-        
-            $db = $this->get(PDO::class);
-        
-            $query = $db->prepare('CALL tambah_barang(:new_id_barang, :new_jenis_barang, :new_merk_barang, :new_harga_perbaikan)');
-            $query->bindValue(':new_id_barang', $new_id_barang, PDO::PARAM_INT);
-            $query->bindValue(':new_jenis_barang', $new_jenis_barang, PDO::PARAM_STR);
-            $query->bindValue(':new_merk_barang', $new_merk_barang, PDO::PARAM_STR);
-            $query->bindValue(':new_harga_perbaikan', $new_harga_perbaikan, PDO::PARAM_INT);
-            $query->execute();
-        
-            $rowCount = $query->rowCount(); 
+
+            $query1 = $db->prepare("CALL detail_item_barang(:new_id_barang)");
+            $query1->bindValue(':new_id_barang', $new_id_barang, PDO::PARAM_INT);
+            $query1->execute();
+            $results = $query1->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($results > 0) {
+                $response->getBody()->write(json_encode(['message' => 'Barang dengan ID ' . $new_id_barang . ' sudah ada!']));
+                return $response->withHeader("Content-Type", "application/json");
+            }
+
+            $query2 = $db->prepare('CALL tambah_barang(:new_id_barang, :new_jenis_barang, :new_merk_barang, :new_harga_perbaikan)');
+            $query2->bindValue(':new_id_barang', $new_id_barang, PDO::PARAM_INT);
+            $query2->bindValue(':new_jenis_barang', $new_jenis_barang, PDO::PARAM_STR);
+            $query2->bindValue(':new_merk_barang', $new_merk_barang, PDO::PARAM_STR);
+            $query2->bindValue(':new_harga_perbaikan', $new_harga_perbaikan, PDO::PARAM_INT);
+            $query2->execute();
+
+            $rowCount = $query2->rowCount();
 
             if ($rowCount > 0) {
                 $response->getBody()->write(json_encode(['message' => 'Barang telah ditambahkan dengan ID ' . $new_id_barang]));
             } else {
                 $response->getBody()->write(json_encode(['message' => 'Terjadi kesalahan dalam menambahkan barang!']));
             }
-        
+
             return $response->withHeader("Content-Type", "application/json");
         } catch (PDOException $e) {
             $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan dalam mengakses database: ' . $e->getMessage()]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(500);
         } catch (Exception $e) {
             $response->getBody()->write(json_encode(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]));
+            return $response->withHeader("Content-Type", "application/json")->withStatus(500);
         }
     });
 
     // put, update barang
     $app->put('/barangg/{id_barang}', function(Request $request, Response $response, $args) {
         try {
+            $db = $this->get(PDO::class);
+
             $barang_id = $args['id_barang'];
 
             $parsedBody = $request->getParsedBody();
@@ -239,8 +251,6 @@ return function (App $app) {
                 $response->getBody()->write(json_encode(['error' => 'Semua field harus diisi.']));
                 return $response->withHeader("Content-Type", "application/json")->withStatus(400);
             }
-            
-            $db = $this->get(PDO::class);
     
             $query = $db->prepare('CALL ubah_harga_perbaikan_barang(:barang_id, :new_jenis_barang, :new_merk_barang, :new_harga_perbaikan)');
             $query->bindValue(':barang_id', $barang_id, PDO::PARAM_INT);
@@ -254,7 +264,7 @@ return function (App $app) {
                 $response->getBody()->write(json_encode(['message' => 'Barang dengan ID ' . $barang_id . ' telah diperbarui']));
             } else {
                 $response->getBody()->write(json_encode(
-                    ['message' => 'Barang dengan ID ' . $barang_id . ' tidak ditemukan atau tidak ada perubahan yang dilakukan']
+                    ['message' => 'Barang dengan ID ' . $barang_id . ' tidak ditemukan atau tidak dilakukan perubahan']
                 ));
             }
     
